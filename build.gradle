@@ -1,0 +1,107 @@
+import org.gradle.api.internal.TaskInputsInternal
+
+task hello {
+    doLast {
+        println("Hello,World!")
+    }
+}
+
+task greet << {
+    chant()
+}
+
+def chant() {
+    ant.echo(message: 'Repeat after me...')
+}
+
+3.times {
+    task "yayGradle$it" << {
+        println("Gradle rocks!")
+    }
+}
+
+yayGradle0.dependsOn greet
+yayGradle2.dependsOn yayGradle0, yayGradle1
+
+class ProjectVersion {
+    String major
+    String minor
+    boolean release
+
+    @Override
+    String toString() {
+        major + "." + minor + "-" + (release ? "RELEASE" : "SNAPSHOT")
+    }
+}
+
+task groupTherapy(dependsOn: yayGradle2)
+
+//def projectVersion = new ProjectVersion()
+//projectVersion.major = 0
+//projectVersion.minor = 1
+//projectVersion.release = false
+//setVersion(projectVersion)
+
+task printVersion(description: 'Print info about version', group: 'build', dependsOn: ['yayGradle2']) << {
+    logger.quiet('VERSION : ' + version)
+//    logger.quiet('VERSION : ' + version.major + "." + version.minor + ":" + (version.release ? "release" : "debug"))
+}
+
+printVersion.doFirst {
+    println 'Reading Version Info...'
+}
+
+printVersion.doFirst {
+    println 'First Action...'
+}
+
+printVersion << {
+    println "Name:$name"
+    println "Group:$group"
+}
+
+task divider << {
+    println '==============================================================================='
+}
+
+yayGradle2.finalizedBy(divider) //定义多次也只会执行一次
+printVersion.finalizedBy(divider)
+
+logger.quiet('DESCRIPTION : ' + description)
+logger.quiet('DEPTH : ' + depth)
+logger.quiet('name : ' + name)
+logger.quiet('group : ' + group)
+logger.quiet('path : ' + path)
+logger.quiet('parent : ' + parent)
+logger.quiet('extensions : ' + extensions)
+
+ext {
+    key = 'value'
+    myprop = 123
+    versionFile = file('version.properties')
+}
+
+logger.quiet("project.ext.key = ${project.ext.key}")
+logger.quiet("project.ext.myprop = ${project.ext.myprop}")
+
+task loadVersion << {
+    project.version = readVersion()
+}
+
+apply plugin: 'java'
+
+ProjectVersion readVersion() {
+    logger.quiet("Loading the version file...")
+    if (!versionFile.exists())
+        throw new GradleException("所需的版本文件不存在")
+    def properties = new Properties()
+    versionFile.withInputStream {
+        properties.load(it)
+    }
+    new ProjectVersion(major: properties.getProperty('major').toInteger(), minor: properties.getProperty('minor').toInteger(), release: properties.getProperty('release').toBoolean())
+}
+
+task makeRelease << {
+    version.release = true
+//    def lines = versionFile.readLines()
+}

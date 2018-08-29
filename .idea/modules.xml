@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/GradleInAction.iml" filepath="$PROJECT_DIR$/.idea/modules/GradleInAction.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/GradleInAction_main.iml" filepath="$PROJECT_DIR$/.idea/modules/GradleInAction_main.iml" group="GradleInAction" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/GradleInAction_test.iml" filepath="$PROJECT_DIR$/.idea/modules/GradleInAction_test.iml" group="GradleInAction" />
+      <module fileurl="file://$PROJECT_DIR$/TodoApp/TodoApp.iml" filepath="$PROJECT_DIR$/TodoApp/TodoApp.iml" />
+    </modules>
+  </component>
+</project>
