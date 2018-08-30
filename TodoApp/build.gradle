@@ -1,20 +1,148 @@
+import com.sun.org.apache.xalan.internal.xsltc.compiler.Copy
+
 apply plugin:'java'
 
-version = 0.1
-sourceCompatibility = 1.8
+class ProjectVersion {
+    String major
+    String minor
+    boolean release
 
-jar {
-    manifest {
-        attributes 'Main-Class':'com.zhengjun.cn.app.ToDoApp'
+    @Override
+    String toString() {
+        major + "." + minor + "-" + (release ? "RELEASE" : "SNAPSHOT")
     }
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src']
+//def projectVersion = new ProjectVersion()
+//projectVersion.major = 0
+//projectVersion.minor = 1
+//projectVersion.release = false
+//setVersion(projectVersion)
+
+task printVersion(description: 'Print info about version', group: 'build', dependsOn: ['yayGradle2']) << {
+    logger.quiet('VERSION : ' + version)
+//    logger.quiet('VERSION : ' + version.major + "." + version.minor + ":" + (version.release ? "release" : "debug"))
+}
+
+printVersion.doFirst {
+    println 'Reading Version Info...'
+}
+
+printVersion.doFirst {
+    println 'First Action...'
+}
+
+printVersion << {
+    println "Name:$name"
+    println "Group:$group"
+}
+
+task divider << {
+    println '==============================================================================='
+}
+
+printVersion.finalizedBy(divider)
+
+logger.quiet('DESCRIPTION : ' + description)
+logger.quiet('DEPTH : ' + depth)
+logger.quiet('NAME : ' + name)
+logger.quiet('GROUP : ' + group)
+logger.quiet('PATH : ' + path)
+logger.quiet('PARENT : ' + parent)
+logger.quiet('EXTENSIONS : ' + extensions)
+
+ext {
+    key = 'value'
+    myprop = 123
+    versionFile = file('version.properties')
+}
+
+logger.quiet("project.ext.key = ${project.ext.key}")
+logger.quiet("project.ext.myprop = ${project.ext.myprop}")
+
+task loadVersion << {
+    project.version = readVersion()
+}
+
+apply plugin: 'java'
+
+ProjectVersion readVersion() {
+    logger.quiet("Loading the version file...")
+    if (!versionFile.exists())
+        throw new GradleException("所需的版本文件不存在")
+    def properties = new Properties()
+    versionFile.withInputStream {
+        properties.load(it)
+    }
+    new ProjectVersion(major: properties.getProperty('major').toInteger(), minor: properties.getProperty('minor').toInteger(), release: properties.getProperty('release').toBoolean())
+}
+
+task makeRelease (description:"") {
+    inputs.property("release",'false')
+    outputs.file(versionFile)
+
+    doLast {
+        version.release = false
+        def properties = new Properties()
+        versionFile.withInputStream {
+            properties.load(it)
         }
+        properties.setProperty('release','false')
+        properties.store(new OutputStreamWriter(new FileOutputStream(versionFile)),"AUTO-UPDATE")
     }
 }
 
-buildDir = 'out'
+task makeReleaseVersion (type:ReleaseTask) {
+    release = readVersion().release
+    destFile = versionFile
+}
+
+class ReleaseTask extends DefaultTask {
+    @Input Boolean release
+    @OutputFile File destFile
+
+    ReleaseTask() {
+        group = 'packing'
+        description = 'Make project a release version'
+    }
+
+    @TaskAction
+    void start(){
+        project.version.release = release
+        def properties = new Properties()
+        destFile.withInputStream {
+            properties.load(it)
+        }
+        properties.setProperty('release',String.valueOf(project.version.release))
+        properties.store(new OutputStreamWriter(new FileOutputStream(destFile)),"AUTO-UPDATE")
+        println "{outputs.files} = ${outputs.files.files}"
+    }
+}
+
+task creatDistribution(type:Zip,dependsOn:makeReleaseVersion){
+    from makeReleaseVersion.outputs.files.files
+    from (sourceSets*.allSource){
+        into 'src'
+    }
+    from (rootDir){
+        include('version.properties')
+    }
+}
+
+task backupReleaseDistribution(type: Copy){
+    from creatDistribution.outputs.files
+    into "$buildDir/backup"
+    doLast {
+        println "rootProject = $rootProject"
+        println "rootDir = $rootDir"
+        println "buildDir = $buildDir"
+        println "buildFile = $buildFile"
+        println "buildscript = $buildscript"
+    }
+}
+
+task releaseCurrentSnapshot (dependsOn:backupReleaseDistribution){
+    doLast {
+        logger.quiet("Releasing the project...")
+    }
+}
